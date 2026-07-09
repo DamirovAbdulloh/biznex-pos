@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+{% load money_filters %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chek #{{ order.pk }} — Biznex</title>
+<style>
+  * { font-family: 'Courier New', monospace; box-sizing: border-box; }
+  body { background: #e5e7eb; margin: 0; padding: 24px 0; }
+  .receipt {
+    width: {{ width_mm }}mm; margin: 0 auto; background: white; padding: 18px 16px;
+    border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    font-size: {{ font_size_px }}px; font-weight: 700; color: #000;
+  }
+  .center { text-align: center; }
+  .logo { font-size: 1.5em; font-weight: 900; letter-spacing: 1px; color: #000; }
+  .sub { font-size: 0.85em; color: #000; margin-top: 2px; font-weight: 700; }
+  .divider { border-top: 2px dashed #000; margin: 12px 0; }
+  .meta-row { display: flex; justify-content: space-between; font-size: 0.95em; color: #000; margin-bottom: 3px; font-weight: 700; }
+  table { width: 100%; font-size: 1em; border-collapse: collapse; margin-top: 6px; }
+  th { text-align: left; font-size: 0.9em; color: #000; font-weight: 800; padding-bottom: 6px; border-bottom: 2px dashed #000; }
+  th.num, td.num { text-align: right; }
+  td { padding: 5px 0; vertical-align: top; color: #000; }
+  .item-name { font-weight: 800; color: #000; }
+  .item-sub { font-size: 0.85em; color: #000; font-weight: 700; }
+  .total-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+  .total-label { font-size: 1.1em; font-weight: 900; color: #000; }
+  .total-amount { font-size: 1.6em; font-weight: 900; color: #000; }
+  .thanks { font-size: 0.95em; color: #000; margin-top: 16px; white-space: pre-line; font-weight: 700; }
+  .actions { width: {{ width_mm }}mm; margin: 16px auto 0; display: flex; gap: 10px; }
+  .btn { flex: 1; padding: 12px; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: center; cursor: pointer; border: none; text-decoration: none; display: block; }
+  .btn-print { background: linear-gradient(135deg,#16a34a,#22c55e); color: white; }
+  .btn-back { background: #e5e7eb; color: #374151; }
+  @page {
+    size: {{ width_mm }}mm auto;
+    margin: 0;
+  }
+  @media print {
+    body { background: white; padding: 0; }
+    .receipt { box-shadow: none; width: 100%; border-radius: 0; padding: 8px; }
+    .actions { display: none; }
+    * { color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<div class="receipt">
+  {% if show_logo %}
+  <div class="center">
+    <div class="logo">🧾 BIZNEX</div>
+    <div class="sub">To'lov cheki</div>
+  </div>
+  <div class="divider"></div>
+  {% endif %}
+  <div class="meta-row"><span>Chek raqami:</span><span>#{{ order.pk }}</span></div>
+  <div class="meta-row"><span>Sana:</span><span>{{ order.updated_at|date:"d.m.Y H:i" }}</span></div>
+  {% if order.table %}<div class="meta-row"><span>Stol:</span><span>{{ order.table.name }}</span></div>{% endif %}
+  {% if order.employee %}<div class="meta-row"><span>Ofitsant:</span><span>{{ order.employee.name }}</span></div>{% endif %}
+  <div class="meta-row"><span>To'lov turi:</span><span>
+    {% if order.payment_type == 'cash' %}Naqd pul
+    {% elif order.payment_type == 'card' %}Karta
+    {% else %}O'tkazma{% endif %}
+  </span></div>
+
+  <div class="divider"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Taom</th>
+        <th class="num">Soni</th>
+        <th class="num">Summa</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>
+          <div class="item-name">{{ item.product.name }}</div>
+          <div class="item-sub">{{ item.price|money }} UZS / {{ item.product.unit }}</div>
+        </td>
+        <td class="num">{{ item.quantity|floatformat:0 }}</td>
+        <td class="num item-name">{{ item.get_subtotal|money }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+
+  <div class="total-row">
+    <span class="total-label">JAMI TO'LOV:</span>
+    <span class="total-amount">{{ order.get_total|money }} UZS</span>
+  </div>
+
+  {% if footer_text %}
+  <div class="center thanks">{{ footer_text }}</div>
+  {% endif %}
+</div>
+
+<div class="actions" {% if silent %}style="display:none"{% endif %}>
+  <button class="btn btn-print" onclick="window.print()">🖨️ Chop etish</button>
+  {% if request.session.waiter_id %}
+  <a href="{% url 'employees:waiter_tables' %}" class="btn btn-back">← Joylar</a>
+  {% else %}
+  <a href="{% url 'orders:list' %}" class="btn btn-back">← Ro'yxat</a>
+  {% endif %}
+</div>
+
+{% if auto_print or silent %}
+<script>
+  // Sozlamalarda belgilangan o'lcham/masштab bilan @page qoidasi tayyor —
+  // shu sababli printer oynasi to'g'ri o'lchamda avtomatik ochiladi.
+  {% if silent %}
+  // "Yashirin" rejim: bu sahifa ko'rinmas iframe ichida yuklangan — chop etilgach
+  // ota oynaga xabar yuboramiz, u iframe'ni olib tashlaydi.
+  window.addEventListener('afterprint', function(){
+    if (window.parent) { window.parent.postMessage('biznex-receipt-printed', '*'); }
+  });
+  window.onload = function() {
+    setTimeout(function() {
+      window.print();
+      // Ba'zi brauzerlarda 'afterprint' ishlamasligi mumkin — zaxira sifatida
+      setTimeout(function(){ if (window.parent) window.parent.postMessage('biznex-receipt-printed', '*'); }, 1500);
+    }, 200);
+  };
+  {% else %}
+  window.onload = function() {
+    setTimeout(function() { window.print(); }, 300);
+  };
+  {% endif %}
+</script>
+{% endif %}
+
+</body>
+</html>

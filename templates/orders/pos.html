@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% load money_filters %}
+{% block title %}{% if is_takeaway_mode %}Saboy — Buyurtma #{{ order.pk }}{% else %}POS — {{ table }} — Biznex{% endif %}{% endblock %}
+{% block page_title %}{% if is_takeaway_mode %}🧺 Saboy buyurtma{% else %}{{ table }}{% endif %}{% endblock %}
+{% block page_subtitle %}Buyurtma #{{ order.pk }}{% if is_takeaway_mode %} — Mijoz o'zi keldi (komissiya yo'q){% endif %}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'orders:list' %}" class="btn-secondary text-sm">← Orqaga</a>
+{% endblock %}
+
+{% block content %}
+<div class="flex gap-6 h-full" style="min-height: calc(100vh - 180px)">
+    <!-- Products panel -->
+    <div class="flex-1">
+        <!-- Category filter -->
+        <div class="cat-tabs mb-5">
+            <a href="?cat=" class="cat-tab {% if not selected_cat %}cat-tab-active{% endif %}">
+                <span class="cat-tab-name">Hammasi</span>
+                <span class="cat-tab-count">Mahsulotlar soni: {{ products_total_count }}</span>
+            </a>
+            {% for cat in categories %}
+            <a href="?cat={{ cat.pk }}" class="cat-tab {% if selected_cat == cat.pk|stringformat:'s' %}cat-tab-active{% endif %}">
+                <span class="cat-tab-letter">{{ cat.name|first|upper }}</span>
+                <span class="cat-tab-name">{{ cat.name }}</span>
+                <span class="cat-tab-count">Mahsulotlar soni: {{ cat.product_count }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        <style>
+        .cat-tabs { display:flex; gap:10px; flex-wrap:wrap; }
+        .cat-tab {
+            display:flex; flex-direction:column; justify-content:center; gap:2px;
+            padding:8px 18px; border-radius:14px; background:#fff; border:1px solid #e5e7eb;
+            text-decoration:none; min-width:140px;
+        }
+        .cat-tab-active { background:linear-gradient(135deg,#16a34a,#22c55e); border-color:transparent; }
+        .cat-tab-name { font-weight:800; font-size:13px; color:#334155; }
+        .cat-tab-active .cat-tab-name, .cat-tab-active .cat-tab-count, .cat-tab-active .cat-tab-letter { color:#fff !important; }
+        .cat-tab-count { font-size:11px; color:#94a3b8; }
+        .cat-tab-letter { font-weight:900; font-size:14px; color:#16a34a; }
+        </style>
+
+        <!-- Products grid -->
+        <div class="pos-products-grid" style="--pos-cols: {{ pos_columns|default:3 }}">
+            {% for product in products %}
+            <button onclick="addItem({{ product.pk }}, '{{ product.name }}')" 
+                class="card p-4 text-left hover:shadow-md hover:scale-[1.02] transition-all active:scale-95 cursor-pointer border-2 border-transparent hover:border-green-200">
+                <div class="flex items-start justify-between mb-2">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white" style="background:linear-gradient(135deg,#16a34a,#22c55e)">
+                        {{ product.name|first }}
+                    </div>
+                    <span class="tag text-xs">{{ product.quantity|floatformat:0 }} {{ product.unit }}</span>
+                </div>
+                <p class="font-semibold text-gray-800 text-sm mt-2 leading-tight">{{ product.name }}</p>
+                <p class="font-bold text-green-600 mt-1">{{ product.price|money }} UZS</p>
+            </button>
+            {% empty %}
+            <div class="card p-10 text-center text-gray-300" style="grid-column: 1 / -1">
+                <svg class="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                Mahsulot topilmadi
+            </div>
+            {% endfor %}
+        </div>
+        <style>
+        .pos-products-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+        @media (min-width: 640px) {
+            .pos-products-grid {
+                grid-template-columns: repeat(var(--pos-cols, 3), minmax(0, 1fr));
+            }
+        }
+        </style>
+    </div>
+
+    <!-- Order panel -->
+    <div class="w-80 flex flex-col">
+        <div class="card flex-1 flex flex-col overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-50">
+                <p class="font-bold text-gray-800">Buyurtma tarkibi</p>
+                {% if is_takeaway_mode %}
+                <p class="text-orange-500 text-sm font-semibold">🧺 Saboy — komissiya hisoblanmaydi</p>
+                {% else %}
+                <p class="text-gray-400 text-sm">{{ table }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Items -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-2" id="order-items">
+                {% for item in items %}
+                <div class="flex items-center justify-between p-3 rounded-xl item-row" data-product-id="{{ item.product.pk }}" style="background:#f8fafc">
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-gray-800 text-sm truncate">{{ item.product.name }}</p>
+                        <p class="text-xs text-gray-400">{{ item.price|money }} × <span class="item-qty">{{ item.quantity|floatformat:1 }}</span></p>
+                    </div>
+                    <div class="flex items-center gap-2 ml-2">
+                        <button type="button" onclick="changeQty({{ item.product.pk }}, -1)" class="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-gray-500 hover:bg-red-50 hover:text-red-500 transition" style="background:#fff; border:1px solid #e5e7eb">−</button>
+                        <p class="font-bold text-gray-900 text-sm item-subtotal w-16 text-right">{{ item.get_subtotal|money }}</p>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-10 text-gray-300" id="empty-state">
+                    <svg class="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4"/></svg>
+                    <p class="text-sm">Mahsulot qo'shing</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Total & Payment -->
+            <div class="p-4 border-t border-gray-100">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-gray-600 font-medium">Jami:</span>
+                    <span class="text-2xl font-bold text-gray-900" id="total-amount">{{ order.get_total|money }} UZS</span>
+                </div>
+
+                <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">To'lov turi</label>
+                <select id="payment-type-select" class="w-full mb-3" style="font-size:16px; padding:12px 14px; border-radius:12px; border:1px solid #e5e7eb; background:#f8fafc;">
+                    <option value="cash">💵 Naqd pul</option>
+                    <option value="card">💳 Karta</option>
+                    <option value="transfer">📱 O'tkazma</option>
+                </select>
+
+                <div class="space-y-2">
+                    <button type="button" onclick="finishOrder({print: true})" class="btn-primary w-full justify-center text-sm" id="finish-print-btn">
+                        <svg width="16" height="16" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                        🖨️ Chek chiqarish va to'lov qilish
+                    </button>
+                    <button type="button" onclick="finishOrder({print: false})" class="w-full justify-center text-sm" style="display:flex; align-items:center; gap:6px; padding:11px 0; border-radius:12px; font-weight:700; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">
+                        💰 Cheksiz to'lov qilish
+                    </button>
+                    <button type="button" onclick="printWithoutClosing()" class="w-full justify-center text-sm" style="display:flex; align-items:center; gap:6px; padding:11px 0; border-radius:12px; font-weight:700; background:#f8fafc; color:#374151; border:1px solid #e5e7eb;">
+                        🧾 Yopmasdan chek chiqarish
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function finishOrder(opts) {
+    var paymentType = document.getElementById('payment-type-select').value;
+    var btns = document.querySelectorAll('#finish-print-btn, .p-4.border-t button');
+    btns.forEach(function(b){ b.disabled = true; b.style.opacity = '0.6'; });
+
+    fetch('{% url "orders:close" order.pk %}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': '{{ csrf_token }}'},
+        body: 'payment_type=' + encodeURIComponent(paymentType)
+    }).then(function(){
+        if (opts.print) {
+            silentPrintReceipt({{ order.pk }}, function(){ window.location.href = '{% url "orders:list" %}'; });
+        } else {
+            window.location.href = '{% url "orders:list" %}';
+        }
+    });
+}
+
+function printWithoutClosing() {
+    var btn = event.target;
+    btn.disabled = true;
+    var original = btn.textContent;
+    btn.textContent = '⏳ Chop etilmoqda...';
+    silentPrintReceipt({{ order.pk }}, function(){
+        btn.disabled = false;
+        btn.textContent = original;
+    });
+}
+</script>
+
+<script>
+const itemsContainer = document.getElementById('order-items');
+const totalEl = document.getElementById('total-amount');
+const productPrices = {
+    {% for product in products %}'{{ product.pk }}': {{ product.price|floatformat:0 }},{% endfor %}
+};
+const productNames = {
+    {% for product in products %}'{{ product.pk }}': '{{ product.name|escapejs }}',{% endfor %}
+};
+
+function refreshEmptyState() {
+    const empty = document.getElementById('empty-state');
+    const hasItems = itemsContainer.querySelectorAll('.item-row').length > 0;
+    if (hasItems && empty) empty.remove();
+    if (!hasItems && !document.getElementById('empty-state')) {
+        itemsContainer.insertAdjacentHTML('beforeend', `
+            <div class="text-center py-10 text-gray-300" id="empty-state">
+                <svg class="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4"/></svg>
+                <p class="text-sm">Mahsulot qo'shing</p>
+            </div>`);
+    }
+}
+
+function addItem(productId, productName) {
+    fetch('{% url "orders:add_item" order.pk %}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+        body: JSON.stringify({product_id: productId, quantity: 1})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            updateRowAfterChange(productId, +1);
+            totalEl.textContent = Math.round(data.total) + ' UZS';
+        }
+    });
+}
+
+function changeQty(productId, delta) {
+    fetch('{% url "orders:update_qty" order.pk %}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+        body: JSON.stringify({product_id: productId, delta: delta})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            updateRowAfterChange(productId, delta);
+            totalEl.textContent = Math.round(data.total) + ' UZS';
+        }
+    });
+}
+
+function updateRowAfterChange(productId, delta) {
+    let row = itemsContainer.querySelector(`.item-row[data-product-id="${productId}"]`);
+    if (row) {
+        const qtyEl = row.querySelector('.item-qty');
+        const subtotalEl = row.querySelector('.item-subtotal');
+        let qty = parseFloat(qtyEl.textContent) + delta;
+        if (qty <= 0) {
+            row.remove();
+        } else {
+            qtyEl.textContent = qty.toFixed(1);
+            const price = productPrices[productId] || 0;
+            subtotalEl.textContent = Math.round(price * qty);
+        }
+    } else if (delta > 0) {
+        const price = productPrices[productId] || 0;
+        const name = productNames[productId] || '';
+        const html = `
+        <div class="flex items-center justify-between p-3 rounded-xl item-row" data-product-id="${productId}" style="background:#f8fafc">
+            <div class="flex-1 min-w-0">
+                <p class="font-semibold text-gray-800 text-sm truncate">${name}</p>
+                <p class="text-xs text-gray-400">${Math.round(price)} × <span class="item-qty">1.0</span></p>
+            </div>
+            <div class="flex items-center gap-2 ml-2">
+                <button type="button" onclick="changeQty(${productId}, -1)" class="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-gray-500 hover:bg-red-50 hover:text-red-500 transition" style="background:#fff; border:1px solid #e5e7eb">−</button>
+                <p class="font-bold text-gray-900 text-sm item-subtotal w-16 text-right">${Math.round(price)}</p>
+            </div>
+        </div>`;
+        itemsContainer.insertAdjacentHTML('beforeend', html);
+    }
+    refreshEmptyState();
+}
+</script>
+{% endblock %}

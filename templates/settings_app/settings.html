@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Sozlamalar — Biznex{% endblock %}
+{% block page_title %}Sozlamalar{% endblock %}
+{% block page_subtitle %}Chek va printer sozlamalari{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+
+  {% if sync_info %}
+  <div class="card p-6 mb-6" style="border:1px solid #e5e7eb;">
+    <h3 class="font-bold text-gray-800 mb-3">🔄 Saytga sinxronizatsiya</h3>
+    {% if sync_info.configured %}
+      <p class="text-sm text-gray-500 mb-1">Manzil: <span class="font-semibold text-gray-700">{{ sync_info.remote_url }}</span></p>
+      <p class="text-sm text-gray-500 mb-4">Oxirgi muvaffaqiyatli sinxronlash:
+        <span class="font-semibold text-gray-700">{{ sync_info.last_sync|default:"Hali bo'lmagan" }}</span>
+      </p>
+      <form method="post" action="{% url 'settings_app:sync_now' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-primary text-sm">Hozir sinxronlash</button>
+      </form>
+      <p class="text-xs text-gray-400 mt-3">Dastur fon rejimida internet bo'lganda avtomatik ~45 soniyada bir marta sinxronlaydi. Internet bo'lmasa, dastur to'liq mahalliy rejimda, xatosiz ishlashda davom etadi.</p>
+    {% else %}
+      <p class="text-sm text-gray-500">Sinxronlash sozlanmagan. Yoqish uchun <code>config.json</code> faylida <code>remote_url</code> va <code>sync_api_key</code>ni to'ldiring.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="mb-5 px-4 py-3 rounded-xl" style="background:#dcfce7;color:#15803d">
+    ✅ {{ message }}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <form method="post" class="card p-6">
+    {% csrf_token %}
+
+    <h2 class="text-gray-900 font-bold text-base mb-1">🧾 Chek o'lchami va ko'rinishi</h2>
+    <p class="text-gray-400 text-sm mb-5">Bu yerda belgilangan o'lcham va masштab chek chop etilganda avtomatik qo'llanadi — har safar printer oynasida qayta sozlash shart bo'lmaydi.</p>
+
+    <div class="grid grid-cols-2 gap-5 mb-5">
+      <div>
+        <label>Qog'oz / chek o'lchami</label>
+        <select name="paper_size" id="paper_size" onchange="toggleCustomWidth()">
+          {% for value, label in paper_size_choices %}
+          <option value="{{ value }}" {% if settings.paper_size == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div id="custom-width-wrap" style="{% if settings.paper_size != 'custom' %}display:none{% endif %}">
+        <label>Kengligi (mm)</label>
+        <input type="number" name="custom_width_mm" min="40" max="300" value="{{ settings.custom_width_mm }}">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-5 mb-5">
+      <div>
+        <label>Shrift o'lchami (px)</label>
+        <input type="number" name="font_size_px" min="8" max="40" value="{{ settings.font_size_px }}">
+        <p class="text-xs text-gray-400 mt-1">Chekdagi asosiy matn kattaligi</p>
+      </div>
+      <div>
+        <label>Chop etish masштabi (%)</label>
+        <input type="number" name="print_scale_percent" min="50" max="300" value="{{ settings.print_scale_percent }}">
+        <p class="text-xs text-gray-400 mt-1">Printer oynasidagi "Масштаб" qiymatiga mos (masalan 130)</p>
+      </div>
+    </div>
+
+    <div class="mb-5">
+      <label>Chek pastki matni</label>
+      <textarea name="footer_text" rows="2">{{ settings.footer_text }}</textarea>
+    </div>
+
+    <div class="flex flex-col gap-3 mb-6">
+      <label class="flex items-center gap-3 cursor-pointer" style="margin-bottom:0">
+        <input type="checkbox" name="show_logo" {% if settings.show_logo %}checked{% endif %} style="width:auto">
+        <span class="text-gray-700 text-sm font-medium">Chekda BIZNEX logotipini ko'rsatish</span>
+      </label>
+      <label class="flex items-center gap-3 cursor-pointer" style="margin-bottom:0">
+        <input type="checkbox" name="auto_print" {% if settings.auto_print %}checked{% endif %} style="width:auto">
+        <span class="text-gray-700 text-sm font-medium">
+          To'lash va chek chiqarish bosilganda — printer oynasi <b>avtomatik</b> ochilsin
+        </span>
+      </label>
+    </div>
+
+    <button type="submit" class="btn-primary">💾 Saqlash</button>
+  </form>
+
+  <form method="post" class="card p-6 mt-6">
+    {% csrf_token %}
+    <h2 class="text-gray-900 font-bold text-base mb-1">🍽️ Taomlar paneli ko'rinishi</h2>
+    <p class="text-gray-400 text-sm mb-5">Buyurtma (POS) ekranida taom kartalari bir qatorda nechtadan ko'rsatilishini tanlang.</p>
+
+    <div class="mb-2">
+      <label>Ustunlar soni (bir qatordagi taomlar)</label>
+      <select name="pos_grid_columns">
+        {% for n in "23456" %}
+        <option value="{{ n }}" {% if settings.pos_grid_columns|stringformat:'s' == n %}selected{% endif %}>{{ n }} ta</option>
+        {% endfor %}
+      </select>
+      <p class="text-xs text-gray-400 mt-1">Masalan: 4 tanlansangiz, har qatorda 4 tadan taom karta ko'rinadi</p>
+    </div>
+
+    <!-- Boshqa chek sozlamalarini shu forma bilan qayta yubormaslik uchun yashirin maydonlar -->
+    <input type="hidden" name="paper_size" value="{{ settings.paper_size }}">
+    <input type="hidden" name="custom_width_mm" value="{{ settings.custom_width_mm }}">
+    <input type="hidden" name="font_size_px" value="{{ settings.font_size_px }}">
+    <input type="hidden" name="print_scale_percent" value="{{ settings.print_scale_percent }}">
+    <input type="hidden" name="footer_text" value="{{ settings.footer_text }}">
+    {% if settings.show_logo %}<input type="hidden" name="show_logo" value="on">{% endif %}
+    {% if settings.auto_print %}<input type="hidden" name="auto_print" value="on">{% endif %}
+
+    <button type="submit" class="btn-primary mt-4">💾 Saqlash</button>
+  </form>
+
+  <div class="card p-6 mt-6">
+    <h2 class="text-gray-900 font-bold text-base mb-1">👁️ Ko'rinish namunasi</h2>
+    <p class="text-gray-400 text-sm mb-4">Joriy sozlamalar bilan chek qanday ko'rinishini tekshirish uchun:</p>
+    <a href="{% url 'orders:receipt_preview' %}" target="_blank" class="btn-secondary">🧾 Namunaviy chekni ochish</a>
+  </div>
+
+</div>
+
+<script>
+function toggleCustomWidth() {
+  const sel = document.getElementById('paper_size');
+  document.getElementById('custom-width-wrap').style.display = sel.value === 'custom' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,301 @@
+{% extends 'base.html' %}
+{% load money_filters %}
+{% block title %}Hisobotlar - Biznex{% endblock %}
+{% block page_title %}Hisobotlar{% endblock %}
+{% block page_subtitle %}{% if is_single_day %}{{ filter_date|date:"d.m.Y" }} sana uchun{% else %}{{ date_from|date:"d.m.Y" }} — {{ date_to|date:"d.m.Y" }} oralig'i uchun{% endif %}{% endblock %}
+
+{% block header_actions %}
+<form method="get" class="flex gap-2 items-center flex-wrap">
+    <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" style="width:150px; padding:8px 12px">
+    <span class="text-gray-400 text-sm">—</span>
+    <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" style="width:150px; padding:8px 12px">
+    <button type="submit" class="btn-primary" style="padding:8px 16px">Sana</button>
+    <a href="{% url 'reports:dashboard' %}" class="btn-secondary" style="padding:8px 16px">Bugun</a>
+</form>
+{% endblock %}
+
+{% block content %}
+<!-- Balans card -->
+<div class="card p-5 mb-6 flex items-center gap-4" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6)">
+  <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-white bg-opacity-20">💰</div>
+  <div class="flex-1">
+    <p class="text-blue-100 text-xs font-semibold uppercase">Joriy Balans</p>
+    <p class="text-white text-3xl font-black">{{ balance.amount|money }} UZS</p>
+  </div>
+  <a href="{% url 'warehouse:list' %}" class="px-4 py-2 rounded-xl bg-white bg-opacity-20 text-white text-sm font-semibold hover:bg-opacity-30 transition">Ombor →</a>
+</div>
+
+<!-- Main financial stats -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+    <div class="card p-6">
+        <p class="text-xs text-gray-400 font-semibold uppercase mb-2">Jami tushum</p>
+        <p class="text-2xl font-bold text-gray-800">{{ total_income|money }} <span class="text-sm font-normal text-gray-400">UZS</span></p>
+        <p class="text-sm text-gray-400 mt-1">{{ total_orders }} ta buyurtma</p>
+    </div>
+    <div class="card p-6">
+        <p class="text-xs text-gray-400 font-semibold uppercase mb-2">Tan narx + Ish haqi</p>
+        <p class="text-2xl font-bold text-red-600">{{ total_cost_and_salaries|money }} <span class="text-sm font-normal text-gray-400">UZS</span></p>
+        <p class="text-sm text-gray-400 mt-1">Taomlar: {{ total_cost|money }} · Ish haqi: {{ total_salaries|money }}</p>
+    </div>
+    <div class="card p-6" style="background:linear-gradient(135deg,#16a34a,#22c55e)">
+        <p class="text-green-100 font-semibold text-sm mb-2">Sof foyda</p>
+        <p class="text-white text-3xl font-bold">{{ net_profit|money }} UZS</p>
+        <p class="text-green-100 text-sm mt-2">{% if is_single_day %}{{ filter_date|date:"d.m.Y" }}{% else %}{{ date_from|date:"d.m.Y" }} — {{ date_to|date:"d.m.Y" }}{% endif %}</p>
+    </div>
+</div>
+
+<!-- Counter cards — bosiladigan -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {% for label, count, color, url in stats %}
+    {% if label == 'Mahsulotlar' %}
+    <button type="button" onclick="openProductsReportModal()" class="card p-5 flex items-center justify-between hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer text-left w-full">
+        <div>
+            <p class="text-xs text-gray-400 font-semibold uppercase mb-1">{{ label }}</p>
+            <p class="text-2xl font-bold text-gray-800">{{ count }}</p>
+        </div>
+        <svg width="18" height="18" fill="none" stroke="#22c55e" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+    {% else %}
+    <a href="{{ url }}" class="card p-5 flex items-center justify-between hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer">
+        <div>
+            <p class="text-xs text-gray-400 font-semibold uppercase mb-1">{{ label }}</p>
+            <p class="text-2xl font-bold {% if color == 'red' %}text-red-500{% else %}text-gray-800{% endif %}">{{ count }}</p>
+        </div>
+        <svg width="18" height="18" fill="none" stroke="#22c55e" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    </a>
+    {% endif %}
+    {% endfor %}
+</div>
+
+<!-- Recent orders -->
+<div class="card overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="font-bold text-gray-800">So'nggi buyurtmalar</h3>
+        <a href="{% url 'orders:list' %}" class="text-green-600 text-sm font-semibold hover:underline">Barchasi →</a>
+    </div>
+    {% if recent_orders %}
+    <table class="w-full">
+        <thead><tr style="background:#f8fafc">
+            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">#</th>
+            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Stol</th>
+            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Xodim</th>
+            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Holat</th>
+            <th class="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Summa</th>
+        </tr></thead>
+        <tbody>
+        {% for o in recent_orders %}
+        <tr class="hrow border-b border-slate-50">
+            <td class="px-6 py-3 text-gray-400 text-sm">#{{ o.pk }}</td>
+            <td class="px-6 py-3 text-gray-700">{{ o.table.name|default:"—" }}</td>
+            <td class="px-6 py-3 text-gray-500 text-sm">{{ o.employee.name|default:"—" }}</td>
+            <td class="px-6 py-3">
+                {% if o.status == 'closed' %}<span class="tag">Yopiq</span>
+                {% elif o.status == 'cancelled' %}<span class="tag-red">Bekor</span>
+                {% else %}<span class="tag-yellow">Ochiq</span>{% endif %}
+            </td>
+            <td class="px-6 py-3 text-right font-bold text-gray-800">{{ o.get_total|money }} UZS</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-10 text-gray-300">Buyurtmalar yo'q</div>
+    {% endif %}
+</div>
+
+<!-- Xodimlar ish haqi — to'liq -->
+<div class="card overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div>
+            <h3 class="font-bold text-gray-800">Xodimlar ish haqi — {% if is_single_day %}{{ filter_date|date:"d.m.Y" }}{% else %}{{ date_from|date:"d.m.Y" }} — {{ date_to|date:"d.m.Y" }}{% endif %}</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Xodim ismi ustiga bosing — batafsil ma'lumot</p>
+        </div>
+    </div>
+    <table class="w-full">
+        <thead><tr style="background:#f8fafc">
+            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Xodim</th>
+            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Lavozim</th>
+            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Savdo</th>
+            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Komissiya</th>
+            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Tur</th>
+            <th class="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Jami ish haqi</th>
+        </tr></thead>
+        <tbody>
+        {% for s in employee_salaries %}
+        <tr class="hrow border-b border-slate-50 cursor-pointer" onclick="openEmpModal({{ s.emp.pk }})">
+            <td class="px-6 py-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style="background:linear-gradient(135deg,#16a34a,#22c55e)">{{ s.emp.get_initials }}</div>
+                    <span class="font-semibold text-gray-800 hover:text-green-600 transition">{{ s.emp.name }}</span>
+                </div>
+            </td>
+            <td class="px-6 py-3 text-gray-500 text-sm">{{ s.emp.role.name|default:"—" }}</td>
+            <td class="px-6 py-3 text-gray-700">{{ s.total_sales|money }} UZS</td>
+            <td class="px-6 py-3 text-blue-600 font-semibold">
+                {% if s.salary_type == 'kunlik' %}
+                {{ s.commission|money }} UZS
+                {% else %}
+                <span class="text-gray-400">—</span>
+                {% endif %}
+            </td>
+            <td class="px-6 py-3">
+                <span class="tag{% if s.salary_type == 'kunlik' %}-yellow{% endif %}">{{ s.salary_type }}</span>
+            </td>
+            <td class="px-6 py-3 text-right font-bold text-green-700">{{ s.total_earnings|money }} UZS</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="px-6 py-8 text-center text-gray-300">Xodimlar topilmadi</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Products Report Modal -->
+<div id="products-report-modal" class="hidden fixed inset-0 flex items-center justify-center" style="background:rgba(0,0,0,0.5);z-index:50">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden flex flex-col" style="max-height:88vh">
+    <div class="p-5 flex items-center justify-between" style="background:linear-gradient(135deg,#16a34a,#22c55e)">
+      <div>
+        <h3 class="text-white font-black text-xl">🍽️ Mahsulotlar hisoboti</h3>
+        <p class="text-green-100 text-sm" id="products-report-date"></p>
+      </div>
+      <div class="flex items-center gap-2">
+        <a id="products-report-download" href="#" target="_blank" class="px-4 py-2 rounded-xl bg-white bg-opacity-20 text-white text-sm font-semibold hover:bg-opacity-30 transition">⬇️ Yuklab olish (PDF)</a>
+        <button type="button" onclick="closeProductsReportModal()" class="w-9 h-9 rounded-xl flex items-center justify-center bg-white bg-opacity-20 text-white hover:bg-opacity-30 transition">✕</button>
+      </div>
+    </div>
+    <div class="overflow-y-auto flex-1">
+      <table class="w-full text-sm">
+        <thead style="background:#f8fafc; position:sticky; top:0">
+          <tr>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Taom</th>
+            <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Tan narxi</th>
+            <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Sotish narxi</th>
+            <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Sotilgan</th>
+            <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Kirim</th>
+            <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Sof foyda</th>
+          </tr>
+        </thead>
+        <tbody id="products-report-rows"></tbody>
+        <tfoot>
+          <tr style="background:#f0fdf4">
+            <td colspan="3" class="px-5 py-3 font-bold text-gray-800">JAMI</td>
+            <td class="px-5 py-3 text-right font-bold text-gray-800" id="products-report-total-qty"></td>
+            <td class="px-5 py-3 text-right font-bold text-gray-800" id="products-report-total-income"></td>
+            <td class="px-5 py-3 text-right font-bold text-green-600" id="products-report-total-profit"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+function fmtMoney(n){return Math.round(n).toLocaleString('uz-UZ');}
+
+function openProductsReportModal(){
+  const dateFromVal = '{{ date_from|date:"Y-m-d" }}';
+  const dateToVal = '{{ date_to|date:"Y-m-d" }}';
+  const qs = 'date_from=' + dateFromVal + '&date_to=' + dateToVal;
+  const label = {% if is_single_day %}'{{ filter_date|date:"d.m.Y" }} sana uchun'{% else %}'{{ date_from|date:"d.m.Y" }} — {{ date_to|date:"d.m.Y" }} oralig\'i uchun'{% endif %};
+  document.getElementById('products-report-date').textContent = label;
+  document.getElementById('products-report-download').href = '{% url "reports:products_report_print" %}?' + qs;
+  document.getElementById('products-report-modal').classList.remove('hidden');
+
+  const tbody = document.getElementById('products-report-rows');
+  tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-gray-300">Yuklanmoqda...</td></tr>';
+
+  fetch('{% url "reports:products_report_data" %}?' + qs)
+    .then(r => r.json())
+    .then(d => {
+      if (!d.rows || !d.rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-gray-300">Mahsulotlar topilmadi</td></tr>';
+      } else {
+        tbody.innerHTML = d.rows.map(function(r){
+          const profitClass = r.profit >= 0 ? 'text-green-600' : 'text-red-500';
+          return '<tr class="hrow border-b border-slate-50">' +
+            '<td class="px-5 py-3 font-semibold text-gray-800">' + r.name + '</td>' +
+            '<td class="px-5 py-3 text-right text-gray-500">' + fmtMoney(r.cost_price) + ' UZS</td>' +
+            '<td class="px-5 py-3 text-right text-gray-500">' + fmtMoney(r.price) + ' UZS</td>' +
+            '<td class="px-5 py-3 text-right text-gray-700">' + r.qty + '</td>' +
+            '<td class="px-5 py-3 text-right text-gray-700">' + fmtMoney(r.income) + ' UZS</td>' +
+            '<td class="px-5 py-3 text-right font-bold ' + profitClass + '">' + fmtMoney(r.profit) + ' UZS</td>' +
+          '</tr>';
+        }).join('');
+      }
+      document.getElementById('products-report-total-qty').textContent = d.totals.qty;
+      document.getElementById('products-report-total-income').textContent = fmtMoney(d.totals.income) + ' UZS';
+      document.getElementById('products-report-total-profit').textContent = fmtMoney(d.totals.profit) + ' UZS';
+    });
+}
+function closeProductsReportModal(){ document.getElementById('products-report-modal').classList.add('hidden'); }
+document.getElementById('products-report-modal').addEventListener('click', function(e){
+  if (e.target === this) closeProductsReportModal();
+});
+</script>
+
+<!-- Employee Modal -->
+<div id="emp-modal" class="hidden fixed inset-0 flex items-center justify-center" style="background:rgba(0,0,0,0.5);z-index:50">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+    <div class="p-6" style="background:linear-gradient(135deg,#16a34a,#22c55e)">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-2xl flex items-center justify-center bg-white bg-opacity-20 text-white text-xl font-black" id="emp-initials"></div>
+        <div>
+          <h3 class="text-white font-black text-xl" id="emp-name"></h3>
+          <p class="text-green-100 text-sm" id="emp-role"></p>
+        </div>
+        <div class="ml-auto text-right">
+          <p class="text-green-100 text-xs">PIN kod</p>
+          <p class="text-white font-mono font-bold text-lg" id="emp-pin"></p>
+        </div>
+      </div>
+    </div>
+    <div class="p-6 space-y-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+        <div class="bg-gray-50 rounded-xl p-3"><p class="text-gray-400 text-xs">Telefon</p><p class="font-semibold text-gray-800" id="emp-phone"></p></div>
+        <div class="bg-gray-50 rounded-xl p-3"><p class="text-gray-400 text-xs">Lavozim turi</p><p class="font-bold text-gray-800" id="emp-salary-type"></p></div>
+        <div class="bg-blue-50 rounded-xl p-3"><p class="text-blue-400 text-xs">Bugungi savdo</p><p class="font-bold text-blue-700" id="emp-today-sales"></p></div>
+        <div class="bg-green-50 rounded-xl p-3"><p class="text-green-400 text-xs">Bugungi ish haqi</p><p class="font-bold text-green-700" id="emp-today-earn"></p></div>
+        <div class="bg-purple-50 rounded-xl p-3"><p class="text-purple-400 text-xs">Oylik savdo</p><p class="font-bold text-purple-700" id="emp-month-sales"></p></div>
+        <div class="bg-orange-50 rounded-xl p-3"><p class="text-orange-400 text-xs">Oylik ish haqi</p><p class="font-bold text-orange-700" id="emp-month-earn"></p></div>
+      </div>
+      <div class="bg-gray-50 rounded-xl p-3 text-sm">
+        <p class="text-gray-400 text-xs mb-1">Stavkalar</p>
+        <p class="font-semibold text-gray-700" id="emp-rates"></p>
+      </div>
+    </div>
+    <div class="px-6 pb-6 flex gap-3">
+      <button onclick="closeEmpModal()" class="flex-1 btn-secondary">Yopish</button>
+      <a id="emp-edit-link" href="#" class="flex-1 btn-primary text-center">✏️ Tahrirlash</a>
+    </div>
+  </div>
+</div>
+<script>
+function fmt(n){return Math.round(n).toLocaleString('uz-UZ');}
+function openEmpModal(pk){
+  fetch('/employees/'+pk+'/detail/').then(r=>r.json()).then(d=>{
+    var init=d.name.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
+    document.getElementById('emp-initials').textContent=init;
+    document.getElementById('emp-name').textContent=d.name;
+    document.getElementById('emp-role').textContent=d.role;
+    document.getElementById('emp-phone').textContent=d.phone;
+    document.getElementById('emp-pin').textContent=d.pin_code;
+    document.getElementById('emp-salary-type').textContent=d.salary_type==='kunlik'?'Kunlik + Komissiya':'Oylik (o\'zgarmas)';
+    document.getElementById('emp-today-sales').textContent=fmt(d.today_sales)+' UZS ('+d.today_orders_count+' ta)';
+    document.getElementById('emp-today-earn').textContent=fmt(d.today_earnings)+' UZS';
+    document.getElementById('emp-month-sales').textContent=fmt(d.month_sales)+' UZS ('+d.month_orders_count+' ta)';
+    document.getElementById('emp-month-earn').textContent=fmt(d.month_earnings)+' UZS';
+    var rates = d.salary_type==='kunlik'
+      ? d.commission_percent+'% komissiya | '+fmt(d.daily_rate)+' UZS/kun'
+      : fmt(d.monthly_rate)+' UZS/oy (belgilangan)';
+    document.getElementById('emp-rates').textContent=rates;
+    document.getElementById('emp-edit-link').href='/employees/'+pk+'/edit/';
+    document.getElementById('emp-modal').classList.remove('hidden');
+  });
+}
+function closeEmpModal(){document.getElementById('emp-modal').classList.add('hidden');}
+document.getElementById('emp-modal').addEventListener('click', function(e){
+  if(e.target===this) closeEmpModal();
+});
+</script>
+{% endblock %}

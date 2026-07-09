@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}{% if client %}Mijozni tahrirlash{% else %}Yangi mijoz{% endif %} - Biznex{% endblock %}
+{% block page_title %}{% if client %}Mijozni tahrirlash{% else %}Yangi mijoz{% endif %}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'clients:list' %}" class="btn-secondary">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+    Orqaga
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-xl">
+    <div class="card p-8">
+        <form method="post">
+            {% csrf_token %}
+            <div class="space-y-5">
+                <div>
+                    <label>Ism *</label>
+                    <input type="text" name="name" value="{{ client.name }}" placeholder="Mijoz ismi" required>
+                </div>
+                <div>
+                    <label>Telefon raqami</label>
+                    <input type="text" name="phone" value="{{ client.phone }}" placeholder="+998 90 123 45 67">
+                </div>
+                <div>
+                    <label>Manzil</label>
+                    <input type="text" name="address" value="{{ client.address }}" placeholder="Shahar, ko'cha, uy">
+                </div>
+                <div>
+                    <label>Izoh</label>
+                    <textarea name="note" rows="3" placeholder="Qo'shimcha ma'lumot...">{{ client.note }}</textarea>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="btn-primary flex-1 justify-center">
+                        {% if client %}Saqlash{% else %}Qo'shish{% endif %}
+                    </button>
+                    <a href="{% url 'clients:list' %}" class="btn-secondary flex-1 justify-center">Bekor qilish</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

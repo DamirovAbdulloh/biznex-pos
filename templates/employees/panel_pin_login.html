@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ employee.name }} — Biznex</title>
+<link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+<style>
+body { background: linear-gradient(135deg,#0d1117 0%,#161b22 100%); min-height:100vh; display:flex; align-items:center; justify-content:center; }
+.pin-btn { width:72px; height:72px; border-radius:20px; font-size:22px; font-weight:800; background:rgba(255,255,255,0.08); color:white; cursor:pointer; transition:all 0.15s; border:2px solid transparent; display:flex; align-items:center; justify-content:center; }
+.pin-btn:hover { background:rgba(34,197,94,0.2); border-color:#22c55e; transform:scale(1.05); }
+.pin-btn:active { transform:scale(0.95); }
+.pin-dot { width:16px; height:16px; border-radius:50%; border:2px solid #4b5563; transition:all 0.2s; }
+.pin-dot.filled { background:#22c55e; border-color:#22c55e; box-shadow:0 0 12px rgba(34,197,94,0.5); }
+.back-link { color:#6b7280; font-size:13px; text-decoration:none; }
+.back-link:hover { color:#9ca3af; }
+.emp-icon { width:56px; height:56px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:rgba(34,197,94,0.18); color:#4ade80; margin:0 auto 14px; }
+</style>
+</head>
+<body style="padding:16px">
+<div class="text-center" style="width:100%; max-width:340px">
+  <a href="{% url 'employees:panel_select' %}" class="back-link mb-6 inline-block">← Boshqa xodim tanlash</a>
+
+  <div class="emp-icon">
+    <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+  </div>
+  <p class="text-white font-black text-2xl mb-1">{{ employee.name }}</p>
+  <p class="text-sm mb-8" style="color:#22c55e">{{ employee.role.name|default:"Xodim" }}</p>
+
+  <p class="text-gray-400 text-sm mb-6">PIN kodingizni kiriting</p>
+
+  <!-- PIN dots -->
+  <div class="flex justify-center gap-5 mb-8" id="pin-dots">
+    <div class="pin-dot" id="dot-0"></div>
+    <div class="pin-dot" id="dot-1"></div>
+    <div class="pin-dot" id="dot-2"></div>
+    <div class="pin-dot" id="dot-3"></div>
+  </div>
+
+  {% if error %}
+  <div class="mb-4 px-4 py-3 rounded-xl text-sm font-semibold" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)">
+    ⚠️ {{ error }}
+  </div>
+  {% endif %}
+
+  <!-- Numpad -->
+  <form method="post" id="pin-form">
+    {% csrf_token %}
+    <input type="hidden" name="pin" id="pin-input">
+    <div class="grid grid-cols-3 gap-3 justify-items-center mb-3">
+      {% for n in "123456789" %}
+      <button type="button" class="pin-btn" onclick="addDigit('{{ n }}')">{{ n }}</button>
+      {% endfor %}
+    </div>
+    <div class="grid grid-cols-3 gap-3 justify-items-center">
+      <button type="button" class="pin-btn" onclick="clearPin()" style="font-size:18px;">⌫</button>
+      <button type="button" class="pin-btn" onclick="addDigit('0')">0</button>
+      <button type="button" class="pin-btn" onclick="submitPin()" style="background:linear-gradient(135deg,#16a34a,#22c55e);border-color:#22c55e">✓</button>
+    </div>
+  </form>
+</div>
+
+<script>
+let pin = '';
+function addDigit(d) {
+  if (pin.length >= 4) return;
+  pin += d;
+  updateDots();
+  if (pin.length === 4) {
+    setTimeout(submitPin, 100);
+  }
+}
+function clearPin() {
+  pin = pin.slice(0, -1);
+  updateDots();
+}
+function updateDots() {
+  for(let i=0;i<4;i++){
+    const dot=document.getElementById('dot-'+i);
+    if(i<pin.length) dot.classList.add('filled');
+    else dot.classList.remove('filled');
+  }
+}
+function submitPin() {
+  if(pin.length < 4) return;
+  document.getElementById('pin-input').value = pin;
+  document.getElementById('pin-form').submit();
+}
+document.addEventListener('keydown', function(e) {
+  if(e.key >= '0' && e.key <= '9') addDigit(e.key);
+  else if(e.key === 'Backspace') clearPin();
+  else if(e.key === 'Enter') submitPin();
+});
+</script>
+</body>
+</html>

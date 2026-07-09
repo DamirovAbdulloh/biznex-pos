@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{% if emp %}Tahrirlash{% else %}Yangi xodim{% endif %} — Biznex{% endblock %}
+{% block page_title %}{% if emp %}Xodimni tahrirlash{% else %}Yangi xodim qo'shish{% endif %}{% endblock %}
+{% block header_actions %}<a href="{% url 'employees:list' %}" class="btn-secondary text-sm">← Orqaga</a>{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+    <div class="card p-6">
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label>To'liq ismi *</label>
+                <input type="text" name="name" value="{{ emp.name|default:'' }}" placeholder="Masalan: Ravshanbek" required>
+            </div>
+
+            <!-- Lavozim tanlash + yangi qo'shish -->
+            <div>
+                <label>Lavozim</label>
+                <div class="flex gap-2">
+                    <select name="role" id="role-select" class="flex-1">
+                        <option value="">— Tanlang —</option>
+                        {% for role in roles %}
+                        <option value="{{ role.pk }}" {% if emp.role_id == role.pk %}selected{% endif %}>{{ role.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" onclick="toggleNewRole()" 
+                        class="px-3 py-2 rounded-xl text-sm font-semibold text-white"
+                        style="background:linear-gradient(135deg,#16a34a,#22c55e); white-space:nowrap">
+                        + Yangi lavozim
+                    </button>
+                </div>
+                <!-- Yangi lavozim inputi -->
+                <div id="new-role-box" class="mt-2 hidden">
+                    <div class="flex gap-2">
+                        <input type="text" id="new-role-input" name="new_role_name" placeholder="Yangi lavozim nomi..." class="flex-1">
+                        <button type="button" onclick="saveNewRole()" 
+                            class="px-4 py-2 rounded-xl text-sm font-semibold text-white"
+                            style="background:#16a34a">Qo'sh</button>
+                        <button type="button" onclick="cancelNewRole()"
+                            class="px-4 py-2 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600">✕</button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Saqlash tugmasini bosganingizda lavozim ham qo'shiladi</p>
+                </div>
+            </div>
+
+            <div>
+                <label>Telefon raqami</label>
+                <input type="text" name="phone" value="{{ emp.phone|default:'' }}" placeholder="+998 90 123 45 67">
+            </div>
+            <div>
+                <label>PIN kod (4 ta raqam, barcha xodimlar uchun)</label>
+                <input type="text" name="pin_code" value="{{ emp.pin_code|default:'' }}" 
+                    placeholder="Masalan: 1234" minlength="4" maxlength="4" pattern="\d{4}">
+            </div>
+
+            <hr class="border-gray-100">
+            <p class="text-sm font-semibold text-gray-500">Ish haqi sozlamalari</p>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label>Komissiya foizi (%)</label>
+                    <input type="number" name="commission_percent" value="{{ emp.commission_percent|default:'0' }}" 
+                        min="0" max="100" step="0.5" placeholder="0">
+                    <p class="text-xs text-gray-400 mt-1">Buyurtma summasidan olinadigan %</p>
+                </div>
+                <div>
+                    <label>Kunlik ish haqi (UZS)</label>
+                    <input type="number" name="daily_rate" value="{{ emp.daily_rate|default:'0' }}" 
+                        min="0" placeholder="0">
+                </div>
+            </div>
+            <div>
+                <label>Oylik ish haqi (UZS)</label>
+                <input type="number" name="monthly_rate" value="{{ emp.monthly_rate|default:'0' }}" 
+                    min="0" placeholder="0">
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="btn-primary">Saqlash</button>
+                <a href="{% url 'employees:list' %}" class="btn-secondary">Bekor</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleNewRole() {
+    const box = document.getElementById('new-role-box');
+    box.classList.toggle('hidden');
+    if (!box.classList.contains('hidden')) {
+        document.getElementById('new-role-input').focus();
+        document.getElementById('role-select').value = '';
+    }
+}
+function cancelNewRole() {
+    document.getElementById('new-role-box').classList.add('hidden');
+    document.getElementById('new-role-input').value = '';
+}
+function saveNewRole() {
+    const name = document.getElementById('new-role-input').value.trim();
+    if (!name) { alert("Lavozim nomini kiriting"); return; }
+    // AJAX orqali hozir saqlash (ixtiyoriy) yoki forma bilan birga saqlanadi
+    fetch("{% url 'employees:role_create' %}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': '{{ csrf_token }}'},
+        body: 'name=' + encodeURIComponent(name)
+    }).then(r => r.json()).then(data => {
+        if (data.id) {
+            const sel = document.getElementById('role-select');
+            const opt = new Option(data.name, data.id, true, true);
+            sel.add(opt);
+            document.getElementById('new-role-input').value = '';
+            document.getElementById('new-role-box').classList.add('hidden');
+        }
+    });
+}
+</script>
+{% endblock %}

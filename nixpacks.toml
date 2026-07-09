@@ -1,0 +1,17 @@
+[phases.setup]
+nixPkgs = ["python310", "nodejs_20"]
+
+[phases.install]
+cmds = [
+  "python3 -m venv /app/.venv",
+  ". /app/.venv/bin/activate && pip install -r requirements.txt",
+  "npm install"
+]
+
+[phases.build]
+cmds = [
+  "npm run build:css"
+]
+
+[start]
+cmd = ". /app/.venv/bin/activate && python manage.py collectstatic --noinput && gunicorn biznex.wsgi --log-file - --bind 0.0.0.0:$PORT"

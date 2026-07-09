@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biznex</title>
+    <!-- Tailwind endi build qilingan, cache bo'ladigan statik fayl sifatida ulanadi
+         (avvalgi Play-CDN JIT skript o'rniga) — sahifa yuklanishi tezroq va offline'da ham ishlaydi. -->
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+    <style>
+        * { font-family: 'Segoe UI', system-ui, sans-serif; }
+        .sidebar-item { transition: all 0.2s ease; }
+        .sidebar-item:hover { background: rgba(34,197,94,0.12); color: #22c55e; }
+        .sidebar-item.active { background: linear-gradient(135deg, #16a34a, #22c55e); color: white !important; box-shadow: 0 4px 14px rgba(22,163,74,0.35); }
+        .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04); }
+        .btn-primary { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; border-radius: 10px; padding: 10px 20px; transition: all 0.2s; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border:none; cursor:pointer; }
+        .btn-primary:hover { box-shadow: 0 4px 16px rgba(22,163,74,0.4); transform: translateY(-1px); }
+        .btn-secondary { background: #f1f5f9; color: #475569; border-radius: 10px; padding: 10px 20px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; border:none; cursor:pointer; }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .tag { background: #dcfce7; color: #15803d; border-radius: 8px; padding: 2px 10px; font-size: 12px; font-weight: 600; }
+        .tag-yellow { background: #fef9c3; color: #92400e; border-radius: 8px; padding: 2px 10px; font-size: 12px; font-weight: 600; }
+        input, select, textarea { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; width: 100%; outline: none; transition: border 0.2s; font-size: 14px; }
+        input:focus, select:focus, textarea:focus { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.1); }
+        label { font-weight: 600; font-size: 13px; color: #374151; margin-bottom: 6px; display: block; }
+        @media (max-width: 1023px) {
+            #sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
+            #sidebar.sidebar-open { transform: translateX(0); }
+            #main-content { margin-left: 0 !important; }
+        }
+        /* Sahifa almashinuvida yengil fade — "sakrash" sezilmasin */
+        .page-fade-enter-active, .page-fade-leave-active { transition: opacity .12s ease; }
+        .page-fade-enter-from, .page-fade-leave-to { opacity: 0; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <div id="app"></div>
+
+    <!-- SolidJS — build bosqichisiz, to'g'ridan-to'g'ri brauzerda ES module sifatida.
+         Routing uchun tashqi kutubxona shart emas: static/spa/router.js'dagi
+         mikro-router (History API + signal) buni hal qiladi. -->
+    <script type="importmap">
+    {
+        "imports": {
+            "solid-js": "http://cdn.jsdelivr.net/npm/solid-js@1.9.5/dist/solid.js",
+            "solid-js/web": "http://cdn.jsdelivr.net/npm/solid-js@1.9.5/web/dist/web.js",
+            "solid-js/html": "http://cdn.jsdelivr.net/npm/solid-js@1.9.5/html/dist/html.js"
+        }
+    }
+    </script>
+    <script>window.BIZNEX_STATIC = "{% static 'spa/' %}";</script>
+    <script type="module" src="{% static 'spa/app.js' %}"></script>
+</body>
+</html>

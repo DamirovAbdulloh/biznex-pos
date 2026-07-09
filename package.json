@@ -1,0 +1,13 @@
+{
+  "name": "biznex_v2",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Biznex POS — Tailwind CSS build (faqat CSS uchun, ilovaning o'zi Node talab qilmaydi)",
+  "scripts": {
+    "build:css": "tailwindcss -i tailwind_src/input.css -o static/css/tailwind.css --minify",
+    "watch:css": "tailwindcss -i tailwind_src/input.css -o static/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

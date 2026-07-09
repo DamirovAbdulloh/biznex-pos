@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Tranzaksiya — Biznex{% endblock %}
+{% block page_title %}Yangi tranzaksiya{% endblock %}
+{% block header_actions %}<a href="{% url 'transactions:list' %}" class="btn-secondary text-sm">← Orqaga</a>{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+    <div class="card p-6">
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label>Tur *</label>
+                <select name="type" required>
+                    <option value="income">➕ Kirim</option>
+                    <option value="expense">➖ Chiqim</option>
+                </select>
+            </div>
+            <div>
+                <label>Summa (UZS) *</label>
+                <input type="number" name="amount" min="0" step="100" required placeholder="0">
+            </div>
+            <div>
+                <label>Kategoriya</label>
+                <select name="category">
+                    <option value="order">Buyurtma</option>
+                    <option value="other">Boshqa</option>
+                </select>
+            </div>
+            <div>
+                <label>To'lov turi</label>
+                <select name="payment_type">
+                    <option value="cash">Naqd pul</option>
+                    <option value="card">Karta</option>
+                    <option value="transfer">O'tkazma</option>
+                </select>
+            </div>
+            <div>
+                <label>Hodim</label>
+                <select name="employee">
+                    <option value="">— Tanlang —</option>
+                    {% for emp in employees %}
+                    <option value="{{ emp.pk }}">{{ emp.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label>Izoh</label>
+                <input type="text" name="note" placeholder="Masalan: Nonga xarid...">
+            </div>
+            <div class="flex gap-3">
+                <button type="submit" class="btn-primary">Saqlash</button>
+                <a href="{% url 'transactions:list' %}" class="btn-secondary">Bekor</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

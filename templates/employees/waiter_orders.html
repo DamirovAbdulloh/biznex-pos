@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="uz">
+<head>
+{% load money_filters %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buyurtmalarim — Biznex</title>
+<link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+<style>
+body { background: #f0fdf4; min-height: 100vh; }
+.order-card {
+  border-radius: 20px; padding: 18px; background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 2px solid transparent;
+  transition: all 0.2s;
+}
+.item-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+.item-row:last-child { border-bottom: none; }
+.status-pill { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<!-- Header -->
+<div style="background:linear-gradient(135deg,#16a34a,#22c55e)" class="px-6 py-4 flex items-center justify-between shadow-md">
+  <div class="flex items-center gap-3">
+    <span class="text-white font-black text-2xl">Biznex</span>
+    <span class="text-green-100 text-sm">/ Ofitsant paneli</span>
+  </div>
+  <div class="flex items-center gap-4">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-full bg-white flex items-center justify-center font-bold text-green-700 text-sm">
+        {{ waiter.get_initials }}
+      </div>
+      <div>
+        <span class="text-white font-semibold text-sm block">{{ waiter.name }}</span>
+        <span class="text-green-100 text-xs">{{ waiter.role.name|default:"Ofitsant" }}</span>
+      </div>
+    </div>
+    <a href="{% url 'employees:waiter_logout' %}"
+       class="px-4 py-2 rounded-xl bg-white bg-opacity-20 text-white text-sm font-semibold hover:bg-opacity-30 transition">
+      Chiqish
+    </a>
+  </div>
+</div>
+
+<!-- Nav tabs -->
+<div class="px-6 pt-4 flex gap-2">
+  <a href="{% url 'employees:waiter_orders' %}" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition" style="background:linear-gradient(135deg,#16a34a,#22c55e)">
+    🧾 Buyurtmalar
+  </a>
+  <a href="{% url 'employees:waiter_tables' %}" class="px-5 py-2.5 rounded-xl text-sm font-bold bg-white text-gray-500 hover:bg-gray-50 transition">
+    📍 Joylar
+  </a>
+</div>
+
+<div class="px-6 py-5">
+{% if orders %}
+<div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))">
+  {% for order in orders %}
+  <a href="{% url 'orders:waiter_pos' %}?table_id={{ order.table.pk }}&waiter_id={{ waiter.pk }}" class="order-card block">
+    <div class="flex items-center justify-between mb-2">
+      <span class="font-bold text-gray-800">{{ order.table.name|default:"Stol yo'q" }}</span>
+      {% if order.sent_to_kitchen %}
+        <span class="status-pill" style="background:#dbeafe;color:#1d4ed8">🍳 Oshpazda</span>
+      {% else %}
+        <span class="status-pill" style="background:#f1f5f9;color:#64748b">📝 Tayyorlanmoqda</span>
+      {% endif %}
+    </div>
+    <p class="text-xs text-gray-400 mb-2">Buyurtma #{{ order.pk }} · {{ order.created_at|date:"H:i" }}</p>
+    <div class="mb-2">
+      {% for item in order.orderitem_set.all %}
+      <div class="item-row">
+        <span class="text-gray-700">{{ item.product.name }} ×{{ item.quantity|floatformat:0 }}</span>
+        <span class="font-semibold text-gray-800">{{ item.get_subtotal|money }}</span>
+      </div>
+      {% empty %}
+      <p class="text-xs text-gray-300 py-2">Mahsulot yo'q</p>
+      {% endfor %}
+    </div>
+    <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+      <span class="text-xs text-gray-400">Jami</span>
+      <span class="font-bold text-green-600">{{ order.get_total|money }} UZS</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-20 text-gray-300">
+  <div class="text-6xl mb-4">🧾</div>
+  <p class="text-lg font-semibold text-gray-400">Hozircha buyurtmangiz yo'q</p>
+  <p class="text-sm text-gray-300 mt-1">Mijoz to'laguncha buyurtmalar shu yerda ko'rinadi</p>
+</div>
+{% endif %}
+</div>
+
+</body>
+</html>

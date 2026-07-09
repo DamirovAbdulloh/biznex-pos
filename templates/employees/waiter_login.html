@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ofitsant paneli — Biznex</title>
+<link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+<style>
+  body { background: linear-gradient(135deg, #16a34a 0%, #15803d 50%, #166534 100%); min-height: 100vh; }
+  .pin-btn { width: 70px; height: 70px; border-radius: 50%; background: rgba(255,255,255,0.15); 
+    backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.3);
+    color: white; font-size: 24px; font-weight: 700; cursor: pointer;
+    transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+  .pin-btn:hover { background: rgba(255,255,255,0.25); transform: scale(1.05); }
+  .pin-btn:active { transform: scale(0.95); }
+  .pin-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.6); 
+    transition: all 0.2s; }
+  .pin-dot.filled { background: white; border-color: white; }
+</style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+<div class="text-center">
+  <!-- Logo -->
+  <div class="mb-8">
+    <h1 class="text-white text-4xl font-black tracking-tight">Biznex</h1>
+    <p class="text-green-200 text-base mt-2">Ofitsant paneli</p>
+  </div>
+
+  <!-- PIN display -->
+  <div class="flex justify-center gap-4 mb-8" id="pin-dots">
+    <div class="pin-dot" id="dot-0"></div>
+    <div class="pin-dot" id="dot-1"></div>
+    <div class="pin-dot" id="dot-2"></div>
+    <div class="pin-dot" id="dot-3"></div>
+    <div class="pin-dot" id="dot-4"></div>
+    <div class="pin-dot" id="dot-5"></div>
+  </div>
+
+  {% if error %}
+  <div class="mb-4 px-6 py-3 rounded-2xl" style="background:rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4)">
+    <p class="text-red-200 text-sm">{{ error }}</p>
+  </div>
+  {% endif %}
+
+  <!-- PIN Keypad -->
+  <div class="grid grid-cols-3 gap-4 mb-6">
+    {% for n in "123456789" %}
+    <button class="pin-btn" onclick="addPin('{{ n }}')">{{ n }}</button>
+    {% endfor %}
+    <button class="pin-btn" onclick="clearPin()">⌫</button>
+    <button class="pin-btn" onclick="addPin('0')">0</button>
+    <button class="pin-btn" onclick="submitPin()" style="background:rgba(255,255,255,0.9); color:#16a34a">✓</button>
+  </div>
+
+  <form method="post" id="pin-form">
+    {% csrf_token %}
+    <input type="hidden" name="pin" id="pin-input">
+  </form>
+
+  <a href="/" class="text-green-200 text-sm opacity-60 hover:opacity-100">← Bosh sahifaga</a>
+</div>
+
+<script>
+let pin = '';
+function addPin(d) {
+  if (pin.length >= 6) return;
+  pin += d;
+  updateDots();
+  if (pin.length >= 6) setTimeout(submitPin, 200);
+}
+function clearPin() {
+  pin = pin.slice(0, -1);
+  updateDots();
+}
+function updateDots() {
+  for (let i = 0; i < 6; i++) {
+    document.getElementById('dot-' + i).classList.toggle('filled', i < pin.length);
+  }
+}
+function submitPin() {
+  if (!pin) return;
+  document.getElementById('pin-input').value = pin;
+  document.getElementById('pin-form').submit();
+}
+document.addEventListener('keydown', e => {
+  if (e.key >= '0' && e.key <= '9') addPin(e.key);
+  else if (e.key === 'Backspace') clearPin();
+  else if (e.key === 'Enter') submitPin();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{% if product %}Tahrirlash{% else %}Yangi taom{% endif %} — Biznex{% endblock %}
+{% block page_title %}{% if product %}Taomni tahrirlash{% else %}Yangi taom qo'shish{% endif %}{% endblock %}
+{% block header_actions %}<a href="{% url 'products:list' %}" class="btn-secondary text-sm">← Orqaga</a>{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+    <div class="card p-6">
+        <form method="post">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <div>
+                    <label>Taom nomi *</label>
+                    <input type="text" name="name" value="{{ product.name|default:'' }}" placeholder="Masalan: Osh, Shashlik..." required>
+                </div>
+                <div>
+                    <label>Kategoriya</label>
+                    <select name="category">
+                        <option value="">— Tanlang —</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.pk }}" {% if product.category_id == cat.pk %}selected{% endif %}>{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label>Tan narxi (UZS) *</label>
+                        <input type="number" name="cost_price" value="{{ product.cost_price|default:0 }}" min="0" required>
+                        <p class="text-xs text-gray-400 mt-1">Taomning o'ziga tushgan narxi</p>
+                    </div>
+                    <div>
+                        <label>Sotish narxi (UZS) *</label>
+                        <input type="number" name="price" value="{{ product.price|default:0 }}" min="0" required>
+                        <p class="text-xs text-gray-400 mt-1">Mijozga sotiladigan narx</p>
+                    </div>
+                </div>
+                <div>
+                    <label>Miqdori</label>
+                    <input type="number" name="quantity" value="{{ product.quantity|default:0 }}" step="0.001" min="0">
+                </div>
+                <div>
+                    <label>O'lchov birligi</label>
+                    <select name="unit">
+                        <option value="dona" {% if product.unit == 'dona' %}selected{% endif %}>Dona</option>
+                        <option value="kg" {% if product.unit == 'kg' %}selected{% endif %}>Kilogram</option>
+                        <option value="porsiya" {% if product.unit == 'porsiya' %}selected{% endif %}>Porsiya</option>
+                        <option value="litr" {% if product.unit == 'litr' %}selected{% endif %}>Litr</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button type="submit" class="btn-primary">
+                    <svg width="15" height="15" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                    Saqlash
+                </button>
+                <a href="{% url 'products:list' %}" class="btn-secondary">Bekor qilish</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
