@@ -7,12 +7,12 @@ from django.db import migrations, models
 
 
 def populate_sync_ids(apps, schema_editor):
-    Employee = apps.get_model('employees', 'Employee')
-    Role = apps.get_model('employees', 'Role')
-    for obj in Employee.objects.all():
+    Category = apps.get_model('products', 'Category')
+    Product = apps.get_model('products', 'Product')
+    for obj in Category.objects.all():
         obj.sync_id = uuid.uuid4()
         obj.save(update_fields=['sync_id'])
-    for obj in Role.objects.all():
+    for obj in Product.objects.all():
         obj.sync_id = uuid.uuid4()
         obj.save(update_fields=['sync_id'])
 
@@ -20,58 +20,58 @@ def populate_sync_ids(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('employees', '0004_alter_employee_commission_percent_and_more'),
+        ('products', '0003_product_order'),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='employee',
+            model_name='category',
             name='sync_deleted',
             field=models.BooleanField(db_index=True, default=False),
         ),
         migrations.AddField(
-            model_name='employee',
+            model_name='category',
             name='sync_dirty',
             field=models.BooleanField(db_index=True, default=True),
         ),
         migrations.AddField(
-            model_name='employee',
+            model_name='category',
             name='sync_id',
             field=models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, null=True),
         ),
         migrations.AddField(
-            model_name='employee',
+            model_name='category',
             name='sync_updated_at',
             field=models.DateTimeField(auto_now=True, db_index=True),
         ),
         migrations.AddField(
-            model_name='role',
+            model_name='product',
             name='sync_deleted',
             field=models.BooleanField(db_index=True, default=False),
         ),
         migrations.AddField(
-            model_name='role',
+            model_name='product',
             name='sync_dirty',
             field=models.BooleanField(db_index=True, default=True),
         ),
         migrations.AddField(
-            model_name='role',
+            model_name='product',
             name='sync_id',
             field=models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, null=True),
         ),
         migrations.AddField(
-            model_name='role',
+            model_name='product',
             name='sync_updated_at',
             field=models.DateTimeField(auto_now=True, db_index=True),
         ),
         migrations.RunPython(populate_sync_ids, migrations.RunPython.noop),
         migrations.AlterField(
-            model_name='employee',
+            model_name='category',
             name='sync_id',
             field=models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, unique=True),
         ),
         migrations.AlterField(
-            model_name='role',
+            model_name='product',
             name='sync_id',
             field=models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, unique=True),
         ),
